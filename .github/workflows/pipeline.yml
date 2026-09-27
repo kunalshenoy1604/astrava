@@ -1,0 +1,16 @@
+# Alternative to Vercel Cron (e.g. on the Hobby plan, where crons run at most daily).
+# Calls the protected ingest endpoint every hour.
+name: Hourly ingestion
+on:
+  schedule:
+    - cron: '7 * * * *'
+  workflow_dispatch:
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger pipeline
+        run: |
+          curl --fail --silent --show-error --max-time 300 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ vars.SITE_URL }}/api/cron/ingest"

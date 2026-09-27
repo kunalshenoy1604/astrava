@@ -1,0 +1,284 @@
+@import 'tailwindcss';
+
+/*
+ * Astrava design tokens
+ * ---------------------
+ * Raw palette values live on :root as --a-* custom properties and are swapped
+ * per theme. Tailwind utilities are generated from the semantic @theme tokens
+ * below, so components never reference a raw hex value.
+ *
+ * Light theme  = premium technical publication (warm paper, ink, vermilion).
+ * Dark theme   = research environment (graphite-green, bone text, amber).
+ * The dark theme is designed separately rather than inverted: accent hue,
+ * rule weight and muted text are all re-tuned for contrast (WCAG AA ≥ 4.5:1
+ * for body and metadata text on both backgrounds).
+ */
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+:root {
+  color-scheme: light;
+  --a-paper: #f3f0e8;
+  --a-paper-raised: #faf8f3;
+  --a-paper-sunken: #ebe7dc;
+  --a-ink: #17150f;
+  --a-ink-2: #3f3b33;
+  --a-ink-3: #625d53;
+  --a-rule: #d6d0c1;
+  --a-rule-strong: #17150f;
+  --a-accent: #b3340d;
+  --a-accent-soft: #f1ddd2;
+  --a-accent-ink: #ffffff;
+  --a-positive: #2c6636;
+  --a-caution: #7f5200;
+  --a-negative: #9d2626;
+  --a-grid: rgb(23 21 15 / 0.045);
+  --a-focus: #0a58ca;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --a-paper: #0e0f0d;
+    --a-paper-raised: #151714;
+    --a-paper-sunken: #0a0b09;
+    --a-ink: #e8e5dc;
+    --a-ink-2: #c3beb2;
+    --a-ink-3: #948f84;
+    --a-rule: #2b2e28;
+    --a-rule-strong: #e8e5dc;
+    --a-accent: #f0a43a;
+    --a-accent-soft: #2e2415;
+    --a-accent-ink: #120d05;
+    --a-positive: #86c48d;
+    --a-caution: #e2b95e;
+    --a-negative: #f08e7e;
+    --a-grid: rgb(232 229 220 / 0.035);
+    --a-focus: #7cb7ff;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --a-paper: #0e0f0d;
+  --a-paper-raised: #151714;
+  --a-paper-sunken: #0a0b09;
+  --a-ink: #e8e5dc;
+  --a-ink-2: #c3beb2;
+  --a-ink-3: #948f84;
+  --a-rule: #2b2e28;
+  --a-rule-strong: #e8e5dc;
+  --a-accent: #f0a43a;
+  --a-accent-soft: #2e2415;
+  --a-accent-ink: #120d05;
+  --a-positive: #86c48d;
+  --a-caution: #e2b95e;
+  --a-negative: #f08e7e;
+  --a-grid: rgb(232 229 220 / 0.035);
+  --a-focus: #7cb7ff;
+}
+
+@theme inline {
+  /* Color tokens */
+  --color-paper: var(--a-paper);
+  --color-paper-raised: var(--a-paper-raised);
+  --color-paper-sunken: var(--a-paper-sunken);
+  --color-ink: var(--a-ink);
+  --color-ink-2: var(--a-ink-2);
+  --color-ink-3: var(--a-ink-3);
+  --color-rule: var(--a-rule);
+  --color-rule-strong: var(--a-rule-strong);
+  --color-accent: var(--a-accent);
+  --color-accent-soft: var(--a-accent-soft);
+  --color-accent-ink: var(--a-accent-ink);
+  --color-positive: var(--a-positive);
+  --color-caution: var(--a-caution);
+  --color-negative: var(--a-negative);
+  --color-focus: var(--a-focus);
+
+  /* Font families (variables are set by next/font/local in layout.tsx) */
+  --font-serif: var(--font-newsreader), 'Iowan Old Style', Georgia, serif;
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+
+@theme {
+  /* Typography scale (px values noted for reference) */
+  --text-micro: 0.6875rem; /* 11 — mono metadata */
+  --text-micro--line-height: 1rem;
+  --text-xs: 0.75rem; /* 12 */
+  --text-sm: 0.875rem; /* 14 */
+  --text-base: 1rem; /* 16 */
+  --text-lg: 1.125rem; /* 18 */
+  --text-xl: 1.375rem; /* 22 */
+  --text-2xl: 1.75rem; /* 28 */
+  --text-3xl: 2.25rem; /* 36 */
+  --text-4xl: 3rem; /* 48 */
+  --text-display: clamp(2.75rem, 7.2vw, 6.5rem);
+  --text-display--line-height: 0.95;
+
+  /* Letter-spacing */
+  --tracking-meta: 0.08em;
+  --tracking-display: -0.025em;
+
+  /* Spacing uses Tailwind's 4px base (--spacing). Layout measures: */
+  --container-measure: 42rem; /* readable prose column */
+  --container-page: 80rem;
+
+  /* Radius system — restrained, editorial */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 6px;
+
+  /* Shadows are reserved for overlays (dialogs, menus) */
+  --shadow-overlay: 0 1px 0 rgb(0 0 0 / 0.04), 0 24px 48px -12px rgb(0 0 0 / 0.28);
+
+  /* Motion tokens */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasis: cubic-bezier(0.3, 0, 0, 1.2);
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --duration-slow: 480ms;
+
+  /* Breakpoints (Tailwind defaults kept; xs added for small phones) */
+  --breakpoint-xs: 26rem;
+
+  --animate-pulse-signal: pulse-signal 2.4s var(--ease-standard) infinite;
+  --animate-fill-bar: fill-bar var(--duration-slow) var(--ease-standard) both;
+  --animate-rise: rise var(--duration-base) var(--ease-standard) both;
+
+  @keyframes pulse-signal {
+    0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--a-accent) 55%, transparent); }
+    70% { box-shadow: 0 0 0 6px transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
+  }
+  @keyframes fill-bar {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@layer base {
+  html {
+    background: var(--a-paper);
+    color: var(--a-ink);
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    scroll-padding-top: 5rem;
+  }
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    font-feature-settings: 'ss01', 'tnum' 0;
+  }
+  ::selection {
+    background: var(--a-accent);
+    color: var(--a-accent-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--a-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+  a {
+    text-underline-offset: 0.18em;
+    text-decoration-thickness: 1px;
+  }
+  hr {
+    border-color: var(--a-rule);
+  }
+  summary {
+    cursor: pointer;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  input,
+  select,
+  textarea {
+    @apply bg-paper-raised text-ink;
+  }
+}
+
+/* Mono uppercase metadata line — the product's primary "information object" texture */
+@utility meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  line-height: var(--text-micro--line-height);
+  letter-spacing: var(--tracking-meta);
+  text-transform: uppercase;
+  color: var(--a-ink-3);
+}
+@utility numeric {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+@utility measure {
+  max-width: var(--container-measure);
+}
+@utility rule-top {
+  border-top: 1px solid var(--a-rule);
+}
+@utility rule-strong {
+  border-top: 2px solid var(--a-rule-strong);
+}
+/* Subtle engineering grid used behind the hero and diagrams */
+@utility grid-paper {
+  background-image:
+    linear-gradient(to right, var(--a-grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--a-grid) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+@utility link {
+  @apply underline decoration-rule hover:decoration-accent;
+  transition: text-decoration-color var(--duration-fast) var(--ease-standard);
+}
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 px-4 h-10 text-sm font-medium rounded-sm border select-none;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard);
+}
+@utility btn-primary {
+  @apply btn bg-ink text-paper border-ink hover:bg-accent hover:border-accent hover:text-accent-ink;
+}
+@utility btn-secondary {
+  @apply btn bg-transparent text-ink border-rule hover:border-ink;
+}
+@utility btn-ghost {
+  @apply btn border-transparent text-ink-2 hover:text-ink px-2;
+}
+@utility field {
+  @apply w-full h-10 px-3 text-sm border border-rule rounded-sm placeholder:text-ink-3 focus:border-ink;
+}
+@utility label {
+  @apply meta block mb-1.5;
+}
+/* Horizontal scroll container for diagrams/tables on narrow screens */
+@utility scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
