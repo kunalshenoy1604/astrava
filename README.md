@@ -34,7 +34,7 @@ Without Supabase variables the app runs on a **clearly labelled demo dataset**: 
 
 ## Deploy to Vercel
 
-Import the repository, add the environment variables from `.env.example`, deploy. `vercel.json` schedules `/api/cron/ingest` hourly (Vercel Pro; on Hobby crons run at most daily — use `.github/workflows/pipeline.yml` instead, with a `CRON_SECRET` secret and `SITE_URL` variable). Vercel sends `Authorization: Bearer $CRON_SECRET` automatically when `CRON_SECRET` is set.
+Import the repository, add the environment variables from `.env.example`, deploy. `vercel.json` schedules `/api/cron/ingest` once a day, which the Hobby plan allows. For the hourly cadence, either change the schedule to `7 * * * *` on Vercel Pro, or enable `.github/workflows/pipeline.yml` (add a `CRON_SECRET` repository secret and a `SITE_URL` variable). Vercel sends `Authorization: Bearer $CRON_SECRET` automatically when `CRON_SECRET` is set.
 
 ---
 
