@@ -15,7 +15,7 @@ npm test             # 57 tests: scoring, data integrity, pipeline, search, sche
 npm run build
 ```
 
-Without Supabase variables the app runs on a **clearly labelled demo dataset**: fictional projects, placeholder sources on `example.org`, illustrative numbers. A status bar on every page says so. Radar and saved signals still work (stored in a first-party cookie); accounts and the admin area need Supabase.
+Without Supabase the app runs **live without a database**: the ingestion pipeline runs against the public GitHub, arXiv, Hacker News, Hugging Face and npm APIs, and its output is cached for an hour, then recomputed. Everything shown is real and sourced. Without stored history, momentum is available only where a source returns a time series (npm daily downloads, Hacker News points by date); recently created repositories are ranked by their measured stars per day. If every source fails, the site falls back to a **clearly labelled demo dataset** (fictional projects, `example.org` placeholder sources) and says so in the status bar. Set `DATA_MODE=demo` to force the demo dataset. Radar and saved signals work without accounts (first-party cookie); accounts and the admin area need Supabase. Setting `GITHUB_TOKEN` raises GitHub's rate limits.
 
 ## Connect Supabase
 

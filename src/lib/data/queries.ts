@@ -3,6 +3,8 @@ import { cacheLife, cacheTag } from 'next/cache'
 import { unstable_rethrow } from 'next/navigation'
 import { createPublicClient } from '@/lib/supabase/server'
 import { demoRepository } from './demo-repository'
+import { liveRepository } from './live-repository'
+import { SIGNALS_TAG } from './tags'
 import { createSupabaseRepository } from './supabase-repository'
 import type { ListOptions, SignalRepository } from './repository'
 import type { SignalStatus } from '@/lib/domain/types'
@@ -11,14 +13,16 @@ import type { SignalSort } from '@/lib/domain/summary'
 /**
  * Cached public reads. Results are shared across users, prerendered into
  * static shells, and invalidated by tag when the pipeline or an admin writes
- * (see revalidateSignals in ./revalidate.ts). Errors are not cached: callers
+ * (pipeline cron route and admin actions). Errors are not cached: callers
  * wrap these in `settle()` and render an inline error state.
  */
-export const SIGNALS_TAG = 'signals'
+export { SIGNALS_TAG }
 
 function repo(): SignalRepository {
   const client = createPublicClient()
-  return client ? createSupabaseRepository(client) : demoRepository
+  if (client) return createSupabaseRepository(client)
+  // Without a database: live data from public APIs, unless DATA_MODE=demo is set explicitly.
+  return process.env.DATA_MODE === 'demo' ? demoRepository : liveRepository
 }
 
 export async function getFeed(options: ListOptions = {}) {

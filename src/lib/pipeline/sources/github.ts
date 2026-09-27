@@ -22,7 +22,8 @@ interface Repo {
   license: { spdx_id: string | null } | null
 }
 
-const DEFAULT_QUERY = 'topic:llm OR topic:ai-agents OR topic:inference OR topic:quantum-computing OR topic:robotics OR topic:security'
+/** One search per topic keeps each query simple (GitHub limits boolean operators per query). */
+const DEFAULT_TOPICS = ['llm', 'ai-agents', 'mcp', 'inference', 'robotics', 'quantum-computing', 'security', 'developer-tools']
 
 export const githubAdapter: SourceAdapter = {
   id: 'github',
@@ -31,12 +32,24 @@ export const githubAdapter: SourceAdapter = {
   isEnabled: () => true,
   async fetch(ctx) {
     const since = isoDate(new Date(ctx.since.getTime() - 60 * 24 * 3600 * 1000)) // repos created in the last ~60 days
-    const q = `${ctx.env.PIPELINE_GITHUB_QUERY ?? DEFAULT_QUERY} created:>${since} stars:>25`
-    const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(q)}&sort=stars&order=desc&per_page=50`
     const headers: Record<string, string> = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }
     if (ctx.env.GITHUB_TOKEN) headers.Authorization = `Bearer ${ctx.env.GITHUB_TOKEN}`
-    const body = (await httpGet(ctx, url, { headers })) as { items?: Repo[] }
-    return (body.items ?? []).map((repo) => ({
+    const queries = ctx.env.PIPELINE_GITHUB_QUERY
+      ? [ctx.env.PIPELINE_GITHUB_QUERY]
+      : DEFAULT_TOPICS.map((t) => `topic:${t}`)
+    const repos = new Map<number, Repo>()
+    const failures: string[] = []
+    for (const q of queries) {
+      const url = `https://api.github.com/search/repositories?q=${encodeURIComponent(`${q} created:>${since} stars:>25`)}&sort=stars&order=desc&per_page=30`
+      try {
+        const body = (await httpGet(ctx, url, { headers })) as { items?: Repo[] }
+        for (const r of body.items ?? []) repos.set(r.id, r)
+      } catch (err) {
+        failures.push((err as Error).message)
+      }
+    }
+    if (repos.size === 0 && failures.length) throw new Error(failures[0])
+    return [...repos.values()].map((repo) => ({
       source: 'github',
       externalId: `${repo.id}:${isoDate(ctx.now)}`,
       url: repo.html_url,

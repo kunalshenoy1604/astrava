@@ -68,6 +68,8 @@ export function validateSignal(signal: Signal): ValidationIssue[] {
       issues.push({ path: `series.${series.id}`, message: 'Demo signals may only contain demo series.' })
     }
   }
+  const rateSource = signal.scoreInputs.adoptionRate?.sourceId
+  if (rateSource && !ids.has(rateSource)) issues.push({ path: 'scoreInputs.adoptionRate', message: `Unknown source id "${rateSource}".` })
   const { momentumSeriesId, adoptionSeriesId } = signal.scoreInputs
   for (const sid of [momentumSeriesId, adoptionSeriesId]) {
     if (sid && !signal.series.some((s) => s.id === sid)) issues.push({ path: 'scoreInputs', message: `Unknown series "${sid}".` })

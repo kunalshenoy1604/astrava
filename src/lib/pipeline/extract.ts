@@ -123,18 +123,46 @@ export function extractSignal(cluster: EntityCluster, series: MetricSeries[], no
     })
   }
 
+  // Measured attention rate for recently created artifacts: total ÷ days since creation (two API fields).
+  const RATE_MAX_AGE_DAYS = 90
+  const rateFrom = (e: NormalizedEvent | undefined, metricId: string, label: string) => {
+    if (!e?.createdAt) return null
+    const total = e.metrics.find((m) => m.id === metricId)?.value
+    const days = (now.getTime() - Date.parse(e.createdAt)) / 86_400_000
+    if (total === undefined || days > RATE_MAX_AGE_DAYS) return null
+    return { perDay: total / Math.max(1, days), label, sourceId: sid(e), total, days: Math.max(1, Math.round(days)) }
+  }
+  const rate = rateFrom(repo, 'github_stars_total', 'GitHub stars') ?? rateFrom(hf, 'hf_likes_total', 'Hugging Face likes')
+  if (rate) {
+    facts.push({
+      kind: 'fact',
+      sourceIds: [rate.sourceId],
+      text: `That is ${fmt(rate.total)} ${rate.label.toLowerCase().replace('github ', '').replace('hugging face ', '')} in ${rate.days} day${rate.days === 1 ? '' : 's'}, an average of ${rate.perDay.toFixed(1)} per day.`,
+    })
+  }
+
   const momentumSeries =
     series.find((s) => s.id === 'github_stars_total') ?? series.find((s) => s.id === 'npm_downloads') ?? series.find((s) => s.id === 'hn_points')
   const ratio = momentumRatio(momentumSeries)
   const adoptionSeries = series.find((s) => s.id === 'npm_downloads') ?? series.find((s) => s.id === 'github_forks_total')
 
-  const rawTitle = truncate(repo ? `${cluster.name}${repo.summary ? ` — ${repo.summary}` : ''}` : paper ? paper.title : cluster.name, 170).trim()
+  const repoName = cluster.name.split('/').pop() ?? cluster.name
+  const shortSummary = (text: string) => {
+    const firstSentence = text.split(/(?<=[.!?。])\s/)[0] ?? text
+    return truncate(firstSentence.replace(/[.。]$/, ''), 90)
+  }
+  const rawTitle = truncate(
+    repo ? `${repoName}${repo.summary ? `: ${shortSummary(repo.summary)}` : ''}` : paper ? paper.title : cluster.name,
+    150,
+  ).trim()
   const title = rawTitle.length >= 8 ? rawTitle : `${rawTitle} (automated signal)`
   const dek = truncate(
     [
       momentumSeries && ratio !== null
         ? `${momentumSeries.label}: ${fmt(momentumSeries.points.at(-1)!.value)} in the latest window (${ratio.toFixed(1)}× the prior mean).`
-        : null,
+        : rate
+          ? `${fmt(rate.total)} ${rate.label} in ${rate.days} days since ${cluster.name} was created (${rate.perDay.toFixed(1)}/day).`
+          : null,
       `${sources.length} source${sources.length === 1 ? '' : 's'} across ${new Set(cluster.events.map((e) => e.source)).size} channel${new Set(cluster.events.map((e) => e.source)).size === 1 ? '' : 's'}. Automatically detected; not yet reviewed.`,
     ]
       .filter(Boolean)
@@ -212,6 +240,7 @@ export function extractSignal(cluster: EntityCluster, series: MetricSeries[], no
       assessed: heuristicAssessment(cluster, topics, now),
       ...(momentumSeries ? { momentumSeriesId: momentumSeries.id } : {}),
       ...(adoptionSeries ? { adoptionSeriesId: adoptionSeries.id } : {}),
+      adoptionRate: rate ? { perDay: Math.round(rate.perDay * 10) / 10, label: rate.label, sourceId: rate.sourceId } : null,
       independentIntegrations: null,
       reproducibleBenchmark: null,
       runnableArtifact: repo || npm || hf ? true : null,
@@ -281,6 +310,9 @@ export function mergeWithExisting(fresh: Signal, existing: Signal | undefined): 
     whatHappened: existing.verified ? existing.whatHappened : refreshed.whatHappened,
     scoreInputs: {
       ...fresh.scoreInputs,
+      adoptionRate: fresh.scoreInputs.adoptionRate
+        ? { ...fresh.scoreInputs.adoptionRate, sourceId: remap.get(fresh.scoreInputs.adoptionRate.sourceId ?? '') ?? fresh.scoreInputs.adoptionRate.sourceId }
+        : (existing.scoreInputs.adoptionRate ?? null),
       ...(existing.scoreInputs.hypeFlags ? { hypeFlags: existing.scoreInputs.hypeFlags } : {}),
       independentIntegrations: existing.scoreInputs.independentIntegrations ?? fresh.scoreInputs.independentIntegrations,
       reproducibleBenchmark: existing.scoreInputs.reproducibleBenchmark ?? fresh.scoreInputs.reproducibleBenchmark,

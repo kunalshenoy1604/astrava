@@ -82,6 +82,8 @@ export const MOMENTUM_BASELINE_PERIODS = 4
 export const INTEGRATION_SATURATION = 5
 /** Growth over the adoption window (as a multiple of the starting value) at which growth saturates. */
 export const ADOPTION_GROWTH_SATURATION = 4
+/** Attention per day since creation (e.g. stars/day) at which the rate half of adoption saturates. */
+export const ADOPTION_RATE_SATURATION = 1000
 /** Independent publishers at which cross-source confirmation saturates. */
 export const CONFIRMATION_SATURATION = 5
 
@@ -170,22 +172,27 @@ function adoptionFactor(signal: Signal): FactorResult {
   const max = FACTOR_WEIGHTS.adoptionVelocity
   const series = signal.series.find((s) => s.id === signal.scoreInputs.adoptionSeriesId)
   const growth = adoptionGrowth(series)
+  const rate = signal.scoreInputs.adoptionRate ?? null
   const integrations = signal.scoreInputs.independentIntegrations
-  if (growth === null && integrations === null) {
+  if (growth === null && rate === null && integrations === null) {
     return {
       id: 'adoptionVelocity',
       label: FACTOR_LABELS.adoptionVelocity,
       points: 0,
       max,
       basis: 'measured',
-      explanation: 'No adoption series or integration count is available.',
+      explanation: 'No adoption series, attention rate or integration count is available.',
       insufficient: true,
     }
   }
   const half = max / 2
   const integrationPts = integrations === null ? 0 : (Math.min(integrations, INTEGRATION_SATURATION) / INTEGRATION_SATURATION) * half
   const growthPts =
-    growth === null ? 0 : clamp(Math.log2(1 + Math.max(0, growth)) / Math.log2(1 + ADOPTION_GROWTH_SATURATION), 0, 1) * half
+    growth !== null
+      ? clamp(Math.log2(1 + Math.max(0, growth)) / Math.log2(1 + ADOPTION_GROWTH_SATURATION), 0, 1) * half
+      : rate !== null
+        ? clamp(Math.log10(1 + Math.max(0, rate.perDay)) / Math.log10(1 + ADOPTION_RATE_SATURATION), 0, 1) * half
+        : 0
   const parts: string[] = []
   parts.push(
     integrations === null
@@ -193,9 +200,11 @@ function adoptionFactor(signal: Signal): FactorResult {
       : `${integrations} independent integration${integrations === 1 ? '' : 's'} (${round1(integrationPts)}/${half}).`,
   )
   parts.push(
-    growth === null
-      ? 'Adoption growth: no series (0 pts).'
-      : `${series!.label} grew ${Math.round(growth * 100)}% over the window (${round1(growthPts)}/${half}).`,
+    growth !== null
+      ? `${series!.label} grew ${Math.round(growth * 100)}% over the window (${round1(growthPts)}/${half}).`
+      : rate !== null
+        ? `${rate.label}: ${rate.perDay.toFixed(1)} per day since creation; full marks at ${ADOPTION_RATE_SATURATION}/day, log-scaled (${round1(growthPts)}/${half}).`
+        : 'Adoption growth: no series (0 pts).',
   )
   return {
     id: 'adoptionVelocity',

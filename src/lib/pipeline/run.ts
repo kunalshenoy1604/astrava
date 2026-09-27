@@ -6,7 +6,7 @@
 import type { MetricSeries } from '@/lib/domain/types'
 import type { FetchContext, Metric, NormalizedEvent, PipelineEnv, PipelineStats, RawEvent, SourceAdapter } from './types'
 import type { PipelineStore } from './store'
-import { buildSeries, dedupe, isCandidate, resolveEntities } from './stages'
+import { buildSeries, dedupe, isCandidate, isRelevant, resolveEntities } from './stages'
 import { extractSignal, mergeWithExisting, signalSlugFor } from './extract'
 import { computeBreakoutScore, momentumRatio } from '@/lib/scoring/model'
 import { validateSignal } from '@/lib/domain/validate'
@@ -103,7 +103,7 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
       const slug = signalSlugFor(cluster)
       const previous = existing.get(slug)
 
-      if (!previous && !isCandidate(cluster, series, momentumRatio)) {
+      if (!previous && (!isRelevant(cluster) || !isCandidate(cluster, series, momentumRatio, now))) {
         stats.skippedBelowThreshold++
         continue
       }

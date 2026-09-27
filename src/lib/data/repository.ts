@@ -9,10 +9,14 @@ export interface ListOptions {
 }
 
 export interface DatasetStatus {
-  mode: 'demo' | 'supabase'
+  mode: 'demo' | 'live' | 'supabase'
   signalCount: number
   lastUpdated: string | null
   lastPipelineRun: { finishedAt: string | null; status: string } | null
+  /** Items fetched per source in the latest live run. */
+  sources?: Record<string, number>
+  sourceErrors?: string[]
+  note?: string
 }
 
 /**
@@ -20,7 +24,7 @@ export interface DatasetStatus {
  * Supabase (Postgres). Pages never talk to a database client directly.
  */
 export interface SignalRepository {
-  readonly mode: 'demo' | 'supabase'
+  readonly mode: 'demo' | 'live' | 'supabase'
   listSignals(options?: ListOptions): Promise<SignalSummary[]>
   getSignal(slug: string): Promise<{ signal: Signal; score: BreakoutScore } | null>
   getSummariesBySlugs(slugs: string[]): Promise<SignalSummary[]>

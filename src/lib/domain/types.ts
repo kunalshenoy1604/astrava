@@ -190,6 +190,12 @@ export interface ScoreInputs {
   momentumSeriesId?: string
   /** Series id used to compute adoption growth. */
   adoptionSeriesId?: string
+  /**
+   * Average attention rate since creation for recently created artifacts
+   * (e.g. GitHub stars per day), measured from two API fields. Used for
+   * adoption velocity when no adoption time series exists yet.
+   */
+  adoptionRate?: { perDay: number; label: string; sourceId?: string } | null
   /** Count of independent projects that integrated the technology, or null if unknown. */
   independentIntegrations: number | null
   /** Whether a benchmark exists that a third party has reproduced or could reproduce. */

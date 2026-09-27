@@ -10,7 +10,8 @@ interface Range {
   package: string
 }
 
-const DEFAULT_KEYWORDS = 'llm,ai-agent,mcp,inference,webgpu'
+const DEFAULT_KEYWORDS = 'llm,ai-agent,mcp,webgpu'
+const PACKAGES_PER_KEYWORD = 12
 
 export const npmAdapter: SourceAdapter = {
   id: 'npm',
@@ -20,23 +21,29 @@ export const npmAdapter: SourceAdapter = {
   async fetch(ctx) {
     const keywords = (ctx.env.PIPELINE_NPM_KEYWORDS ?? DEFAULT_KEYWORDS).split(',').map((k) => k.trim()).filter(Boolean)
     const out: RawEvent[] = []
+    // Keywords run in sequence; the per-package download lookups for each keyword run in parallel.
     for (const kw of keywords) {
-      const search = (await httpGet(ctx, `https://registry.npmjs.org/-/v1/search?text=keywords:${encodeURIComponent(kw)}&size=20&popularity=0.2&quality=0.3&maintenance=0.5`)) as {
-        objects?: SearchObject[]
-      }
-      for (const obj of search.objects ?? []) {
+      const search = (await httpGet(
+        ctx,
+        `https://registry.npmjs.org/-/v1/search?text=keywords:${encodeURIComponent(kw)}&size=${PACKAGES_PER_KEYWORD}&popularity=0.2&quality=0.3&maintenance=0.5`,
+      )) as { objects?: SearchObject[] }
+      const ranges = await Promise.all(
+        (search.objects ?? []).map((obj) =>
+          httpGet(ctx, `https://api.npmjs.org/downloads/range/last-month/${encodeURIComponent(obj.package.name).replace('%40', '@')}`)
+            .then((r) => r as Range)
+            .catch(() => null),
+        ),
+      )
+      ;(search.objects ?? []).forEach((obj, i) => {
         const name = obj.package.name
-        const range = (await httpGet(ctx, `https://api.npmjs.org/downloads/range/last-month/${encodeURIComponent(name).replace('%40', '@')}`).catch(
-          () => null,
-        )) as Range | null
         out.push({
           source: 'npm',
           externalId: `${name}:${ctx.now.toISOString().slice(0, 10)}`,
           url: `https://www.npmjs.com/package/${name}`,
           occurredAt: ctx.now.toISOString(),
-          payload: { pkg: obj.package, range },
+          payload: { pkg: obj.package, range: ranges[i] ?? null },
         })
-      }
+      })
     }
     return out
   },

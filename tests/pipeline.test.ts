@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { canonicalizeUrl, refsFromUrl, weekStart } from '@/lib/pipeline/util'
 import { parseFeed } from '@/lib/pipeline/feed-parser'
-import { buildSeries, classifyTopics, dedupe, resolveEntities } from '@/lib/pipeline/stages'
+import { buildSeries, classifyTopics, dedupe, isCandidate, isRelevant, resolveEntities } from '@/lib/pipeline/stages'
 import { runPipeline } from '@/lib/pipeline/run'
 import { MemoryPipelineStore } from '@/lib/pipeline/store'
 import { ALL_ADAPTERS } from '@/lib/pipeline/sources'
@@ -125,6 +125,24 @@ describe('pipeline stages', () => {
     const asOf = new Date('2026-09-27T00:00:00Z')
     const obs = ['2026-09-26', '2026-09-25', '2026-09-18'].map((on, i) => ({ id: 'dl', label: 'downloads', unit: 'd', value: [10, 20, 5][i]!, on, aggregation: 'periodic' as const }))
     expect(buildSeries(obs, asOf)[0]!.points.map((p) => p.value)).toEqual([5, 30])
+  })
+
+  it('keeps general news out and developer topics in', () => {
+    const cluster = (text: string, source = 'hackernews') => ({ key: 'url:x', name: 'x', kind: 'technology' as const, events: [ev({ text, source })] })
+    expect(isRelevant(cluster('Senate passes budget after overnight attack on the plan'))).toBe(false)
+    expect(isRelevant(cluster('Show HN: an open-source LLM inference server in Rust'))).toBe(true)
+    expect(isRelevant(cluster('acme/specagent A sandboxed agent runtime for tool calling', 'github'))).toBe(true)
+  })
+
+  it('qualifies a new, fast-growing repository without history', () => {
+    const now = new Date('2026-09-27T00:00:00Z')
+    const repo = (stars: number, createdAt: string) => ({
+      key: 'github:a/b', name: 'a/b', kind: 'repository' as const,
+      events: [ev({ source: 'github', createdAt, metrics: [{ id: 'github_stars_total', label: 's', unit: 's', value: stars, on: '2026-09-27', aggregation: 'cumulative' as const }] })],
+    })
+    expect(isCandidate(repo(400, '2026-09-10T00:00:00Z'), [], () => null, now)).toBe(true)
+    expect(isCandidate(repo(40, '2026-09-10T00:00:00Z'), [], () => null, now)).toBe(false)
+    expect(isCandidate(repo(4000, '2024-01-01T00:00:00Z'), [], () => null, now)).toBe(false)
   })
 
   it('classifies topics from text', () => {

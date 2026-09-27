@@ -3,6 +3,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import {
   ADOPTION_GROWTH_SATURATION,
+  ADOPTION_RATE_SATURATION,
   BAND_THRESHOLDS,
   CONFIDENCE_INDEPENDENT_SATURATION,
   CONFIDENCE_WEIGHTS,
@@ -64,7 +65,7 @@ const FACTOR_RULE: Record<FactorId, string> = {
   novelty: 'Analyst rubric 0–4 (None → Exceptional). Points = level ÷ 4 × 15.',
   technicalSignificance: 'Analyst rubric 0–4. How much the change alters what is technically possible or affordable.',
   developerRelevance: 'Analyst rubric 0–4. How directly developers can use or are affected by it.',
-  adoptionVelocity: `Half from independent integrations (full at ${INTEGRATION_SATURATION}), half from growth of an adoption series (full at ${ADOPTION_GROWTH_SATURATION}× the starting value, log-scaled).`,
+  adoptionVelocity: `Half from independent integrations (full at ${INTEGRATION_SATURATION}), half from growth of an adoption series (full at ${ADOPTION_GROWTH_SATURATION}× the starting value, log-scaled) — or, for artifacts created in the last 90 days with no series yet, from their average attention per day since creation (full at ${ADOPTION_RATE_SATURATION}/day, log-scaled).`,
   communityMomentum: `log₂(momentum ratio) ÷ log₂(${MOMENTUM_SATURATION}) × 10, dampened when the latest period has fewer than ${MOMENTUM_MIN_VOLUME} events.`,
   sourceCredibility: `10 × (0.6 × primary source present + 0.4 × mean tier weight).`,
   crossSourceConfirmation: `Independent publishers (community publishers count ½), full at ${CONFIRMATION_SATURATION}.`,

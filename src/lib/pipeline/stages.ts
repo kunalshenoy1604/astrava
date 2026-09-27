@@ -100,15 +100,35 @@ export function resolveEntities(events: NormalizedEvent[]): EntityCluster[] {
 /* ------------------------------------------------------------------ */
 
 export const TOPIC_KEYWORDS: Record<string, RegExp> = {
-  'ai-agents': /\b(agent|agents|agentic|tool[- ]calling|mcp|autonomous|multi-agent)\b/i,
-  'foundation-models': /\b(llm|language model|foundation model|pretrain|fine-?tun|transformer|weights|moe|diffusion)\b/i,
-  'ai-infrastructure': /\b(inference|serving|kv[- ]cache|quantiz|vector (database|index|search)|embedding|gpu|cuda|triton|rag|retrieval)\b/i,
-  'developer-tools': /\b(cli|ide|editor|lsp|language server|devtool|debugg|lint|compiler plugin|sdk|framework|testing)\b/i,
+  'ai-agents': /\b(ai agents?|llm agents?|coding agents?|agentic|tool[- ]calling|mcp|model context protocol|multi-agent|autonomous agents?)\b/i,
+  'foundation-models': /\b(llms?|language models?|foundation models?|pretrain(ing|ed)?|fine-?tun(e|ing|ed)|transformers?|open weights|mixture of experts|diffusion models?|gpt|claude|gemini|llama|mistral|qwen|deepseek)\b/i,
+  'ai-infrastructure': /\b(inference|model serving|kv[- ]cache|quantiz(ation|ed)|vector (database|index|search)|embeddings?|triton|rag|retrieval-augmented|vllm|llama\.cpp|ollama)\b/i,
+  'developer-tools': /\b(cli|ide|code editor|lsp|language server|devtools?|debugger|linter|compiler plugin|sdk|web framework|test runner|typescript|javascript|python library|npm package)\b/i,
   robotics: /\b(robot|robotics|manipulation|locomotion|sim-?to-?real|embodied|vla)\b/i,
   'quantum-computing': /\b(quantum|qubit|qiskit|post-quantum|ml-kem|error correction)\b/i,
-  cybersecurity: /\b(security|vulnerab|cve|exploit|malware|sandbox|supply[- ]chain|cryptograph|attack|jailbreak|prompt injection)\b/i,
-  'computing-infrastructure': /\b(kernel|risc-?v|wasm|webassembly|database|postgres|runtime|jit|compiler|networking|kubernetes|rust)\b/i,
-  'open-source': /\b(open[- ]source|oss|license|maintainer)\b/i,
+  cybersecurity: /\b(infosec|cybersecurity|vulnerabilit(y|ies)|cve-\d+|zero-day|exploit(ed|s)?|malware|ransomware|sandbox(ed|ing)?|supply[- ]chain attack|cryptograph(y|ic)|jailbreak|prompt injection|backdoor)\b/i,
+  'computing-infrastructure': /\b(linux kernel|risc-?v|wasm|webassembly|databases?|postgres(ql)?|sqlite|jit|compilers?|kubernetes|rust|gpus?|cuda|distributed systems?)\b/i,
+  'open-source': /\b(open[- ]source|oss|licen[cs]e change|maintainers?)\b/i,
+}
+
+/** Number of topic-keyword hits, excluding the generic open-source topic. Used to drop off-topic clusters. */
+export function relevanceHits(text: string): number {
+  return Object.entries(TOPIC_KEYWORDS)
+    .filter(([topic]) => topic !== 'open-source')
+    .reduce((n, [, re]) => n + (text.match(new RegExp(re.source, 'gi')) ?? []).length, 0)
+}
+
+/**
+ * A cluster is on-topic when it comes from a topic-filtered source (GitHub
+ * search, Hugging Face, npm keyword search, arXiv categories) and matches at
+ * least one keyword, or — for general sources such as Hacker News — matches
+ * at least two, which keeps general news out of the feed.
+ */
+export function isRelevant(cluster: EntityCluster): boolean {
+  const text = cluster.events.map((e) => e.text).join(' ')
+  const hits = relevanceHits(text)
+  const topical = cluster.events.some((e) => ['github', 'huggingface', 'npm', 'arxiv'].includes(e.source))
+  return topical ? hits >= 1 : hits >= 2
 }
 
 export function classifyTopics(text: string, sourceKinds: string[]): { primary: string; topics: string[] } {
@@ -190,11 +210,28 @@ export const CANDIDATE_RULES = {
   minLatestVolume: 20,
   minStarsGained: 100,
   minDiscussionPoints: 150,
+  /** A newly created repository or model with this much attention qualifies without history. */
+  newArtifactMaxAgeDays: 60,
+  minNewRepoStars: 150,
+  minNewModelLikes: 40,
 } as const
 
-export function isCandidate(cluster: EntityCluster, series: MetricSeries[], momentum: (s: MetricSeries) => number | null): boolean {
+export function isCandidate(
+  cluster: EntityCluster,
+  series: MetricSeries[],
+  momentum: (s: MetricSeries) => number | null,
+  now: Date = new Date(),
+): boolean {
   const sources = new Set(cluster.events.map((e) => e.source))
   if (sources.size >= CANDIDATE_RULES.minDistinctSources) return true
+  for (const e of cluster.events) {
+    if (!e.createdAt) continue
+    const ageDays = (now.getTime() - Date.parse(e.createdAt)) / 86_400_000
+    if (ageDays > CANDIDATE_RULES.newArtifactMaxAgeDays) continue
+    const stars = e.metrics.find((m) => m.id === 'github_stars_total')?.value ?? 0
+    const likes = e.metrics.find((m) => m.id === 'hf_likes_total')?.value ?? 0
+    if (stars >= CANDIDATE_RULES.minNewRepoStars || likes >= CANDIDATE_RULES.minNewModelLikes) return true
+  }
   for (const s of series) {
     const latest = s.points.at(-1)?.value ?? 0
     const ratio = momentum(s)
