@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import { connection } from 'next/server'
 import { loadLiveSnapshot } from '@/lib/data/live-repository'
-import { privilegedSql } from '@/lib/db/privileged'
+import { privilegedHost, privilegedSql } from '@/lib/db/privileged'
 import { aiConfigFromEnv } from '@/lib/ai/client'
 import { sanitizeError } from '@/lib/ai/enricher'
 import { isSupabaseConfigured } from '@/lib/config'
@@ -43,7 +43,7 @@ async function databaseStatus(): Promise<{ text: string; tone: Tone }> {
     const sql = await privilegedSql()
     if (!sql) return { text: 'Supabase API configured; direct connection unavailable', tone: 'warn' }
     const [row] = await sql<{ n: number }[]>`select count(*)::int as n from public._astrava_migrations`
-    return { text: `Connected · ${row?.n ?? 0} migrations applied`, tone: 'ok' }
+    return { text: `Connected via ${await privilegedHost()} · ${row?.n ?? 0} migrations applied`, tone: 'ok' }
   } catch (err) {
     return { text: sanitizeError((err as Error).message), tone: 'bad' }
   }
@@ -51,7 +51,11 @@ async function databaseStatus(): Promise<{ text: string; tone: Tone }> {
 
 async function Status() {
   await connection()
-  const [snap, db] = await Promise.all([loadLiveSnapshot(), databaseStatus()])
+  const dbWithTimeout = Promise.race([
+    databaseStatus(),
+    new Promise<{ text: string; tone: Tone }>((resolve) => setTimeout(() => resolve({ text: 'Connection check timed out', tone: 'bad' }), 15_000)),
+  ])
+  const [snap, db] = await Promise.all([loadLiveSnapshot(), dbWithTimeout])
   const s = snap.stats
   const ai = s.ai
   const aiConfig = aiConfigFromEnv()
