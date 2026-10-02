@@ -98,4 +98,5 @@ export interface PipelineStats {
   candidates: number
   stored: number
   skippedBelowThreshold: number
+  ai?: { enriched: number; fromCache: number; filtered: number; verifiedClaims: number; droppedClaims: number; errors: number; rateLimited: boolean }
 }

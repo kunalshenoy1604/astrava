@@ -10,7 +10,7 @@ export function ProfileForm({ displayName }: { displayName: string }) {
       <label htmlFor="displayName" className="label">
         Display name
       </label>
-      <input id="displayName" name="displayName" defaultValue={displayName} maxLength={80} className="field" />
+      <input id="displayName" name="displayName" autoComplete="name" defaultValue={displayName} maxLength={80} className="field" />
       <button type="submit" disabled={pending} className="btn-secondary h-9">
         {pending ? 'Saving…' : 'Save'}
       </button>

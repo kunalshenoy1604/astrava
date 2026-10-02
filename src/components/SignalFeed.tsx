@@ -25,7 +25,7 @@ export function SignalFeed({
   return (
     <ol className="divide-y divide-rule border-y border-rule">
       {signals.map((s, i) => (
-        <li key={s.id} className="animate-rise" style={{ animationDelay: `${Math.min(i, 8) * 30}ms` }}>
+        <li key={s.id} className={i > 8 ? '[content-visibility:auto] [contain-intrinsic-size:auto_260px]' : 'animate-rise'} style={i <= 8 ? { animationDelay: `${i * 30}ms` } : undefined}>
           <SignalCard signal={s} rank={ranked ? i + 1 : undefined} headingLevel={headingLevel} />
         </li>
       ))}

@@ -81,7 +81,15 @@ export default function AdminPage() {
   return (
     <div className="mx-auto max-w-page px-4 pt-10 sm:px-6">
       <p className="meta">Restricted</p>
-      <h1 className="mt-1 mb-8 font-serif text-4xl font-medium">Data management</h1>
+      <h1 className="mt-1 mb-4 font-serif text-4xl font-medium">Data management</h1>
+      <p className="mb-8 flex gap-4 text-sm">
+        <Link href="/admin/applications" className="link">
+          Reviewer applications
+        </Link>
+        <Link href="/moderation" className="link">
+          Moderation log
+        </Link>
+      </p>
       <Suspense fallback={<LoadingState rows={4} label="Loading admin" />}>
         <AdminHome />
       </Suspense>

@@ -2,9 +2,19 @@
 
 import Link from 'next/link'
 import { useActionState } from 'react'
-import { signInAction, signUpAction, signInWithGoogleAction, type AuthState } from '@/lib/auth/actions'
+import { signInAction, signUpAction, signInWithProviderAction, type AuthState } from '@/lib/auth/actions'
 
-export function AuthForm({ mode, next, googleEnabled, initialError }: { mode: 'sign-in' | 'sign-up'; next: string; googleEnabled: boolean; initialError?: string }) {
+export function AuthForm({
+  mode,
+  next,
+  providers,
+  initialError,
+}: {
+  mode: 'sign-in' | 'sign-up'
+  next: string
+  providers: { id: string; label: string }[]
+  initialError?: string
+}) {
   const [state, action, pending] = useActionState<AuthState | null, FormData>(mode === 'sign-in' ? signInAction : signUpAction, null)
   const error = state?.error ?? (state ? undefined : initialError)
   return (
@@ -19,6 +29,9 @@ export function AuthForm({ mode, next, googleEnabled, initialError }: { mode: 's
             id="email"
             name="email"
             type="email"
+            spellCheck={false}
+            autoCapitalize="none"
+            placeholder="you@company.com…"
             autoComplete="email"
             required
             defaultValue={state?.email ?? ''}
@@ -62,14 +75,21 @@ export function AuthForm({ mode, next, googleEnabled, initialError }: { mode: 's
         </button>
       </form>
 
-      {googleEnabled ? (
-        <form action={signInWithGoogleAction}>
-          <input type="hidden" name="next" value={next} />
-          <div className="meta mb-4 flex items-center gap-3 before:h-px before:flex-1 before:bg-rule after:h-px after:flex-1 after:bg-rule">or</div>
-          <button type="submit" className="btn-secondary h-11 w-full">
-            Continue with Google
-          </button>
-        </form>
+      {providers.length ? (
+        <div className="grid gap-2">
+          <div className="meta flex items-center gap-3 before:h-px before:flex-1 before:bg-rule after:h-px after:flex-1 after:bg-rule">or continue with</div>
+          <div className={`grid gap-2 ${providers.length > 1 ? 'grid-cols-2' : ''}`}>
+            {providers.map((p) => (
+              <form key={p.id} action={signInWithProviderAction}>
+                <input type="hidden" name="provider" value={p.id} />
+                <input type="hidden" name="next" value={next} />
+                <button type="submit" className="btn-secondary h-11 w-full">
+                  {p.label}
+                </button>
+              </form>
+            ))}
+          </div>
+        </div>
       ) : null}
 
       <p className="text-sm text-ink-2">

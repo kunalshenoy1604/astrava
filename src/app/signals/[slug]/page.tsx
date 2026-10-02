@@ -24,6 +24,7 @@ import { SaveSignalButton } from '@/components/SaveSignalButton'
 import { DemoBadge, MetaSep, StatusBadge, TopicBadge, VerifiedBadge } from '@/components/Badges'
 import { ErrorState, LoadingState } from '@/components/States'
 import { AdoptionTable, Builders, Competing, Section, ShouldICare, TOC } from './sections'
+import { ReviewerTools } from '@/components/ReviewerTools'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -183,6 +184,15 @@ async function SignalArticle({ params }: Props) {
             <ClaimTag kind="estimate" /> forward-looking · [n] links to the source
           </p>
 
+          {signal.ai ? (
+            <p className="mb-6 border-l-2 border-ink pl-3 text-sm text-ink-2">
+              <span className="meta mr-2 text-ink">AI contextual layer</span>
+              {signal.ai.verifiedClaims} claim{signal.ai.verifiedClaims === 1 ? '' : 's'} drafted by {signal.ai.model} were kept because each quote was found
+              verbatim in its source; {signal.ai.droppedClaims} unverifiable claim{signal.ai.droppedClaims === 1 ? ' was' : 's were'} discarded. Statements marked{' '}
+              <span className="font-mono text-[10px]">AI</span> await human review.
+            </p>
+          ) : null}
+
           <Section id="what-happened" title="What happened">
             <StatementList statements={signal.whatHappened} className="text-[17px]" />
           </Section>
@@ -246,6 +256,10 @@ async function SignalArticle({ params }: Props) {
             </div>
             <ScoreBreakdown score={score} />
           </Section>
+
+          <Suspense fallback={null}>
+            <ReviewerTools slug={signal.slug} title={signal.title} />
+          </Suspense>
 
           <Section id="related" title="Related signals">
             <Suspense fallback={<LoadingState rows={2} label="Loading related signals" />}>

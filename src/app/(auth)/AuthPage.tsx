@@ -1,12 +1,13 @@
 import Link from 'next/link'
-import { isGoogleAuthEnabled, isSupabaseConfigured } from '@/lib/config'
+import { OAUTH_PROVIDERS, isSupabaseConfigured } from '@/lib/config'
+import { enabledProviders } from '@/lib/auth/providers'
 import { safeRedirectPath } from '@/lib/security/url'
 import { AuthForm } from '@/components/AuthForm'
 
 const ERRORS: Record<string, string> = {
   callback: 'The sign-in link could not be completed. Please try again.',
   confirm: 'That confirmation link is invalid or has expired.',
-  oauth: 'Google sign-in could not start. Please try again.',
+  oauth: 'Social sign-in could not start. Please try again or use email.',
   rate_limited: 'Too many attempts. Wait a few minutes and try again.',
 }
 
@@ -33,7 +34,7 @@ export async function AuthPage({ mode, searchParams }: { mode: 'sign-in' | 'sign
       </div>
       <div className="rounded-sm border border-rule-strong bg-paper-raised p-6">
         {isSupabaseConfigured ? (
-          <AuthForm mode={mode} next={next} googleEnabled={isGoogleAuthEnabled} initialError={errorKey ? ERRORS[errorKey] : undefined} />
+          <AuthForm mode={mode} next={next} providers={(await enabledProviders()).map((id) => ({ id, label: OAUTH_PROVIDERS[id] }))} initialError={errorKey ? ERRORS[errorKey] : undefined} />
         ) : (
           <div>
             <p className="meta text-caution">Accounts disabled</p>

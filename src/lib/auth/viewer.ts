@@ -6,7 +6,7 @@ export interface Viewer {
   id: string
   email: string | null
   displayName: string | null
-  role: 'member' | 'admin'
+  role: 'member' | 'reviewer' | 'admin'
 }
 
 /**
@@ -24,9 +24,15 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     id: data.user.id,
     email: data.user.email ?? null,
     displayName: (profile?.display_name as string | null) ?? null,
-    role: profile?.role === 'admin' ? 'admin' : 'member',
+    role: profile?.role === 'admin' ? 'admin' : profile?.role === 'reviewer' ? 'reviewer' : 'member',
   }
 })
+
+/** Reviewers and admins may hide/restore signals. */
+export async function requireReviewer(): Promise<Viewer | null> {
+  const viewer = await getViewer()
+  return viewer && (viewer.role === 'reviewer' || viewer.role === 'admin') ? viewer : null
+}
 
 export async function requireAdmin(): Promise<Viewer | null> {
   const viewer = await getViewer()

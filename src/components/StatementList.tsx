@@ -20,6 +20,19 @@ export function StatementText({ statement }: { statement: Statement }) {
     <>
       <ClaimTag kind={statement.kind} /> <span>{statement.text}</span>
       <SourceRefs ids={statement.sourceIds} />
+      {statement.origin === 'ai' ? (
+        <abbr
+          title="Drafted by the AI contextual layer. Facts were accepted only because the quoted excerpt was found verbatim in the cited source."
+          className="ml-1.5 font-mono text-[10px] tracking-[0.08em] text-ink-3 uppercase no-underline"
+        >
+          AI
+        </abbr>
+      ) : null}
+      {statement.quote ? (
+        <span className="mt-1 block border-l border-rule pl-2 text-xs text-ink-3">
+          <q lang="">{statement.quote}</q>
+        </span>
+      ) : null}
     </>
   )
 }

@@ -16,6 +16,12 @@ export function SiteFooter() {
           <p className="meta mt-6 max-w-xs normal-case tracking-normal">
             Early signals are not guaranteed outcomes. Scores are analytical rankings, not predictions.
           </p>
+          <p className="mt-4 text-sm text-ink-2">
+            Designed and built by{' '}
+            <Link href="/about#builder" className="link text-ink">
+              Kunal Shenoy
+            </Link>
+          </p>
         </div>
         <nav aria-label="Product">
           <p className="meta mb-3">Product</p>
@@ -32,6 +38,8 @@ export function SiteFooter() {
             <li><Link className="link" href="/methodology">Methodology</Link></li>
             <li><Link className="link" href="/methodology#breakout-score">Breakout Score</Link></li>
             <li><Link className="link" href="/methodology#uncertainty">Uncertainty</Link></li>
+            <li><Link className="link" href="/moderation">Moderation log</Link></li>
+            <li><Link className="link" href="/reviewers">Become a reviewer</Link></li>
             <li><Link className="link" href="/about">About</Link></li>
           </ul>
         </nav>

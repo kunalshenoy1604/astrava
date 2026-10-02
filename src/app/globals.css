@@ -172,6 +172,8 @@
   }
   body {
     @apply bg-paper text-ink font-sans antialiased;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: color-mix(in srgb, var(--a-accent) 18%, transparent);
     font-feature-settings: 'ss01', 'tnum' 0;
   }
   ::selection {
@@ -192,6 +194,23 @@
   }
   summary {
     cursor: pointer;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  p,
+  li,
+  dd {
+    text-wrap: pretty;
+  }
+  select {
+    background-color: var(--a-paper-raised);
+    color: var(--a-ink);
+  }
+  dialog {
+    overscroll-behavior: contain;
   }
   summary::-webkit-details-marker {
     display: none;
@@ -241,7 +260,15 @@
   transition:
     background-color var(--duration-fast) var(--ease-standard),
     color var(--duration-fast) var(--ease-standard),
-    border-color var(--duration-fast) var(--ease-standard);
+    border-color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
 }
 @utility btn-primary {
   @apply btn bg-ink text-paper border-ink hover:bg-accent hover:border-accent hover:text-accent-ink;

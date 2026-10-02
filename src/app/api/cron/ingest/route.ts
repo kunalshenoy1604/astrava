@@ -6,7 +6,8 @@ import { enabledAdapters } from '@/lib/pipeline/sources'
 import { SupabasePipelineStore } from '@/lib/pipeline/store'
 import { pipelineEnvFromProcess } from '@/lib/pipeline/env'
 import { createServiceClient } from '@/lib/supabase/service'
-import { SIGNALS_TAG } from '@/lib/data/queries'
+import { SIGNALS_TAG } from '@/lib/data/tags'
+import { buildEnricherFromEnv } from '@/lib/ai/setup'
 
 export const maxDuration = 300
 
@@ -34,6 +35,7 @@ export async function GET(request: NextRequest) {
       adapters: enabledAdapters(env),
       store: new SupabasePipelineStore(createServiceClient()),
       env,
+      enrich: buildEnricherFromEnv(),
     })
     if (result.stats.stored > 0) revalidateTag(SIGNALS_TAG, 'max')
     return NextResponse.json(result)

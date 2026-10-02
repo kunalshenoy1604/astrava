@@ -96,11 +96,11 @@ describe('schema and row-level security', () => {
   })
 
   it('isolates saved signals and radar topics per user', async () => {
-    await as('authenticated', ALICE, 'insert into saved_signals (user_id, signal_id) values ($1, $2)', [ALICE, DEMO_SIGNALS[0]!.id])
+    await as('authenticated', ALICE, 'insert into saved_signals (user_id, signal_slug) values ($1, $2)', [ALICE, DEMO_SIGNALS[0]!.slug])
     await as('authenticated', ALICE, 'insert into user_topics (user_id, topic_slug) values ($1, $2)', [ALICE, 'robotics'])
     const bobSees = await as('authenticated', BOB, 'select * from saved_signals')
     expect(bobSees.rows).toHaveLength(0)
-    await expect(as('authenticated', BOB, 'insert into saved_signals (user_id, signal_id) values ($1, $2)', [ALICE, DEMO_SIGNALS[2]!.id])).rejects.toThrow(/row-level security/)
+    await expect(as('authenticated', BOB, 'insert into saved_signals (user_id, signal_slug) values ($1, $2)', [ALICE, DEMO_SIGNALS[2]!.slug])).rejects.toThrow(/row-level security/)
     expect((await as('anon', null, 'select * from user_topics')).rows).toHaveLength(0)
   })
 
@@ -123,5 +123,44 @@ describe('schema and row-level security', () => {
     expect(topics.some((x) => x.result_type === 'topic')).toBe(true)
     const hidden = (await as('anon', null, `select href from search_all('Tracefile')`)).rows as { href: string }[]
     expect(hidden.some((x) => x.href.includes(DEMO_SIGNALS[1]!.slug))).toBe(false)
+  })
+
+  it('lets only reviewers moderate, with a reason, and logs publicly', async () => {
+    const slug = DEMO_SIGNALS[3]!.slug
+    await expect(as('authenticated', ALICE, `select moderate_signal($1, 't', 'hide', 'Sources do not support the headline claim.')`, [slug])).rejects.toThrow(/Only reviewers/)
+    await expect(as('anon', null, `select moderate_signal($1, 't', 'hide', 'Sources do not support the headline claim.')`, [slug])).rejects.toThrow()
+    await db.query(`update profiles set role = 'reviewer', display_name = 'Rev' where id = $1`, [BOB])
+    await expect(as('authenticated', BOB, `select moderate_signal($1, 't', 'hide', 'too short')`, [slug])).rejects.toThrow(/at least 20/)
+    await as('authenticated', BOB, `select moderate_signal($1, 'Title', 'hide', 'Sources do not support the headline claim.')`, [slug])
+    const state = await as('anon', null, 'select hidden from signal_moderation where signal_slug = $1', [slug])
+    expect((state.rows[0] as { hidden: boolean }).hidden).toBe(true)
+    const log = await as('anon', null, 'select action, actor_name from moderation_log where signal_slug = $1', [slug])
+    expect(log.rows).toEqual([{ action: 'hide', actor_name: 'Rev' }])
+    await expect(as('authenticated', BOB, `insert into moderation_log (signal_slug, action, reason) values ('x-y-z', 'hide', 'direct write attempt here')`)).rejects.toThrow()
+  })
+
+  it('accepts one pending reviewer application per user, visible to its owner and admins only', async () => {
+    const app = (uid: string) =>
+      as(
+        'authenticated',
+        uid,
+        `insert into reviewer_applications (user_id, email, full_name, expertise, motivation, experience, sample_review, conflicts, hours_per_week, agreed_guidelines)
+         values ($1, 'a@example.com', 'Alice Example', array['ai-agents'], repeat('m', 220), repeat('e', 160), repeat('s', 220), 'None', 3, true)`,
+        [uid],
+      )
+    await app(ALICE)
+    await expect(app(ALICE)).rejects.toThrow(/duplicate key/)
+    await expect(as('authenticated', BOB, `insert into reviewer_applications (user_id, email, full_name, expertise, motivation, experience, sample_review, conflicts, hours_per_week, agreed_guidelines, status) values ($1, 'b@example.com', 'Bob', array['robotics'], repeat('m', 220), repeat('e', 160), repeat('s', 220), 'None', 3, true, 'approved')`, [BOB])).rejects.toThrow(/row-level security/)
+    expect((await as('authenticated', BOB, 'select * from reviewer_applications')).rows).toHaveLength(0)
+    expect((await as('authenticated', ALICE, 'select * from reviewer_applications')).rows).toHaveLength(1)
+    expect((await as('authenticated', ADMIN, 'select * from reviewer_applications')).rows).toHaveLength(1)
+    await as('authenticated', ALICE, `update reviewer_applications set status = 'approved'`)
+    const st = await db.query<{ status: string }>('select status from reviewer_applications')
+    expect(st.rows[0]!.status).toBe('pending')
+  })
+
+  it('keeps the AI cache private', async () => {
+    expect((await as('anon', null, 'select * from ai_enrichments')).rows).toHaveLength(0)
+    await expect(as('authenticated', ALICE, `insert into ai_enrichments (cache_key, model, result) values ('k', 'm', '{}')`)).rejects.toThrow()
   })
 })

@@ -7,7 +7,8 @@ import { createSessionClient } from '@/lib/supabase/server'
 import { rateLimit } from '@/lib/security/rate-limit'
 import { safeRedirectPath } from '@/lib/security/url'
 import { mergeAnonymousState } from '@/lib/personal/store'
-import { siteConfig } from '@/lib/config'
+import { siteConfig, type OAuthProvider } from '@/lib/config'
+import { enabledProviders } from './providers'
 
 export interface AuthState {
   error?: string
@@ -64,14 +65,17 @@ export async function signUpAction(_prev: AuthState | null, formData: FormData):
   return { notice: 'Check your inbox to confirm your email address, then sign in.', email: parsed.data.email }
 }
 
-export async function signInWithGoogleAction(formData: FormData): Promise<void> {
+/** Starts an OAuth (PKCE) sign-in with any enabled provider: Google, X, GitHub, LinkedIn, … */
+export async function signInWithProviderAction(formData: FormData): Promise<void> {
   const limited = await rateLimit('auth')
   if (!limited.allowed) redirect('/sign-in?error=rate_limited')
+  const provider = String(formData.get('provider') ?? '')
+  if (!((await enabledProviders()) as string[]).includes(provider)) redirect('/sign-in?error=oauth')
   const supabase = await createSessionClient()
   if (!supabase) redirect('/sign-in')
   const next = safeRedirectPath(String(formData.get('next') ?? ''), '/radar')
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
+    provider: provider as OAuthProvider,
     options: { redirectTo: `${await origin()}/auth/callback?next=${encodeURIComponent(next)}` },
   })
   if (error || !data.url) redirect('/sign-in?error=oauth')

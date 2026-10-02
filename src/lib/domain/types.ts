@@ -13,6 +13,10 @@ export interface Statement {
   kind: ClaimKind
   /** Ids of entries in `Signal.sources` that support this statement. */
   sourceIds?: string[]
+  /** Verbatim excerpt from the cited source that supports the statement (verified by string match). */
+  quote?: string
+  /** 'ai' when drafted by the AI contextual layer rather than a template or a person. */
+  origin?: 'ai'
 }
 
 export type SourceKind =
@@ -242,6 +246,8 @@ export interface Signal {
   entities: EntityRef[]
   sources: Source[]
   scoreInputs: ScoreInputs
+  /** Present when the AI contextual layer processed this signal. */
+  ai?: { model: string; at: string; verifiedClaims: number; droppedClaims: number }
 }
 
 /* ------------------------------------------------------------------ */

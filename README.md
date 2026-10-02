@@ -10,8 +10,8 @@ Next.js 16 (App Router, Cache Components) · TypeScript · Tailwind CSS 4 · Sup
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000 — runs on the demo dataset, no setup needed
-npm test             # 57 tests: scoring, data integrity, pipeline, search, schema + RLS
+npm run dev          # http://localhost:3000 — live data from public APIs, no setup needed
+npm test             # 72 tests: scoring, integrity, pipeline, AI layer, reviewers, search, schema + RLS
 npm run build
 ```
 
@@ -19,18 +19,18 @@ Without Supabase the app runs **live without a database**: the ingestion pipelin
 
 ## Connect Supabase
 
-1. Create a Supabase project. Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or the legacy anon key) and `SUPABASE_SERVICE_ROLE_KEY`.
-2. Apply the schema: `supabase db push`, or paste `supabase/migrations/20260927000000_init.sql` into the SQL editor.
-3. Seed topics (required) and, optionally, the demo signals:
-   ```bash
-   npm run seed -- --topics-only   # production: topics only
-   npm run seed                    # topics + demo signals (kept flagged is_demo = true)
-   ```
-4. Auth → URL configuration: add `https://your-domain/auth/callback` and `https://your-domain/auth/confirm` as redirect URLs. For Google, enable the provider in Supabase and set `NEXT_PUBLIC_AUTH_GOOGLE_ENABLED=true`.
-5. Make yourself an admin after signing up:
-   ```sql
-   update public.profiles set role = 'admin' where id = (select id from auth.users where email = 'you@example.com');
-   ```
+1. Set `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and `SUPABASE_DB_PASSWORD` (or `POSTGRES_URL`). Optional: `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_REGION` (e.g. `ap-south-1`, speeds up connecting).
+2. Deploy. `npm run build` runs `scripts/migrate.ts` first, which applies every migration in `supabase/migrations/`, seeds topics, and makes `ADMIN_NOTIFICATION_EMAIL` an admin (now, or when that address signs up). No SQL to paste.
+3. In Supabase → Authentication → URL Configuration, set **Site URL** to the deployed URL and add `<site>/auth/callback` and `<site>/auth/confirm` to the redirect allow list.
+4. Social logins: enable any of Google, X (OAuth 2.0), GitHub, LinkedIn (OIDC), Apple, Discord, GitLab under Authentication → Providers, using the callback URL Supabase shows. The sign-in page reads the enabled list from Supabase and shows those buttons automatically.
+
+## Reviewers and moderation
+
+Signed-in users apply at `/reviewers/apply` with a structured case (profiles, expertise, motivation, experience, a sample review of a live signal, conflicts). The application is stored and emailed (Resend) to `ADMIN_NOTIFICATION_EMAIL` with a signed 14-day link to `/reviewers/decision`; approving there (a POST, so link scanners can't trigger it) grants the `reviewer` role. Admins also see all applications at `/admin/applications`. Reviewers get a "hide from public view" control on every signal page; each hide/restore requires a public reason and is recorded in `/moderation`. Hiding never deletes data.
+
+## AI contextual layer
+
+With `GROQ_API_KEY` (or `AI_API_KEY` + `AI_BASE_URL` for any OpenAI-compatible provider), the top new signals each run are read by `openai/gpt-oss-20b`: README / model card / package readme text in, structured JSON out. Claims are kept only if their quoted excerpt is found verbatim in the cited source; off-topic items are filtered; rubric suggestions are capped and never override a human. Results are cached per signal per week in `ai_enrichments`.
 
 ## Deploy to Vercel
 

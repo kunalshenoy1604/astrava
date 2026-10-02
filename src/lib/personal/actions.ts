@@ -55,12 +55,10 @@ export async function toggleSavedAction(_prev: ActionResult | null, formData: Fo
   const viewer = await getViewer()
   if (viewer) {
     const db = (await createSessionClient())!
-    const { data: signal } = await db.from('signals').select('id').eq('slug', slug).maybeSingle()
-    if (!signal) return { ok: false, message: 'Signal not found.' }
     const res =
       intent === 'save'
-        ? await db.from('saved_signals').upsert({ user_id: viewer.id, signal_id: signal.id }, { onConflict: 'user_id,signal_id', ignoreDuplicates: true })
-        : await db.from('saved_signals').delete().eq('user_id', viewer.id).eq('signal_id', signal.id)
+        ? await db.from('saved_signals').upsert({ user_id: viewer.id, signal_slug: slug }, { onConflict: 'user_id,signal_slug', ignoreDuplicates: true })
+        : await db.from('saved_signals').delete().eq('user_id', viewer.id).eq('signal_slug', slug)
     if (res.error) return { ok: false, message: 'Could not update saved signals.' }
   } else {
     const store = await cookies()

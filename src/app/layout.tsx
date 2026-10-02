@@ -68,6 +68,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               url: siteConfig.url,
               logo: absoluteUrl('/icon.svg'),
               description: siteConfig.description,
+              founder: { '@type': 'Person', name: 'Kunal Shenoy', url: 'https://www.linkedin.com/in/kunal-shenoy/' },
             },
             {
               '@context': 'https://schema.org',

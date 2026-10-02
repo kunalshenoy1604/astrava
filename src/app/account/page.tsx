@@ -9,6 +9,7 @@ import { signOutAction } from '@/lib/auth/actions'
 import { TOPIC_BY_SLUG } from '@/lib/demo/topics'
 import { SignalFeed } from '@/components/SignalFeed'
 import { ProfileForm } from '@/components/ProfileForm'
+import { myLatestApplication } from '@/lib/reviewers/queries'
 import { ErrorState, LoadingState } from '@/components/States'
 
 export const metadata: Metadata = { title: 'Account', robots: { index: false, follow: false } }
@@ -16,7 +17,7 @@ export const metadata: Metadata = { title: 'Account', robots: { index: false, fo
 async function Account() {
   const viewer = await getViewer()
   if (!viewer) redirect('/sign-in?next=/account')
-  const [topics, saved] = await Promise.all([getRadarTopics(viewer), getSavedSlugs(viewer)])
+  const [topics, saved, application] = await Promise.all([getRadarTopics(viewer), getSavedSlugs(viewer), myLatestApplication(viewer.id).catch(() => null)])
   const savedSummaries = await settle(getSummaries(saved))
   return (
     <div className="grid gap-12 lg:grid-cols-[20rem_minmax(0,1fr)]">
@@ -37,6 +38,33 @@ async function Account() {
           <Link href="/radar" className="btn-secondary mt-3">
             Edit radar
           </Link>
+        </section>
+        <section aria-labelledby="review-h">
+          <h2 id="review-h" className="meta text-ink">
+            Reviewer access
+          </h2>
+          {viewer.role !== 'member' ? (
+            <p className="mt-2 text-sm">
+              You are a <strong>{viewer.role}</strong>. Moderation tools appear on signal pages.{' '}
+              <Link href="/moderation" className="link">
+                Moderation log
+              </Link>
+            </p>
+          ) : application ? (
+            <p className="mt-2 text-sm text-ink-2">
+              Application {application.status}
+              {application.decision_note ? ` — “${application.decision_note}”` : ''}.{' '}
+              {application.status !== 'pending' ? (
+                <Link href="/reviewers/apply" className="link">
+                  Apply again
+                </Link>
+              ) : null}
+            </p>
+          ) : (
+            <Link href="/reviewers" className="btn-secondary mt-3">
+              Apply to become a reviewer
+            </Link>
+          )}
         </section>
         <form action={signOutAction}>
           <button type="submit" className="btn-ghost">

@@ -20,6 +20,7 @@ export type SignalContent = Pick<
   | 'competingApproaches'
   | 'builders'
   | 'scoreInputs'
+  | 'ai'
 >
 
 export interface SignalRow {
@@ -89,8 +90,10 @@ export function contentOf(signal: Signal): SignalContent {
     competingApproaches,
     builders,
     scoreInputs,
+    ai,
   } = signal
   return {
+    ...(ai ? { ai } : {}),
     whatHappened,
     whyItMatters,
     technicalChange,

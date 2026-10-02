@@ -14,7 +14,7 @@ export function Logo() {
   return (
     <Link href="/" className="inline-flex items-center gap-2 text-ink" aria-label="Astrava home">
       <LogoMark />
-      <span className="font-serif text-[1.35rem] leading-none font-semibold tracking-[-0.02em]">Astrava</span>
+      <span translate="no" className="font-serif text-[1.35rem] leading-none font-semibold tracking-[-0.02em]">Astrava</span>
     </Link>
   )
 }

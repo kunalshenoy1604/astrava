@@ -32,7 +32,7 @@ async function SearchForm({ searchParams }: { searchParams: SP }) {
       <label htmlFor="q" className="sr-only">
         Search
       </label>
-      <input id="q" name="q" defaultValue={q} placeholder="e.g. inference, sandbox, post-quantum" className="field h-12 text-base" maxLength={120} autoFocus />
+      <input id="q" name="q" defaultValue={q} type="search" enterKeyHint="search" autoComplete="off" spellCheck={false} placeholder="e.g. inference, sandbox, post-quantum…" className="field h-12 text-base" maxLength={120} />
       <button className="btn-primary h-12 px-5">Search</button>
     </form>
   )

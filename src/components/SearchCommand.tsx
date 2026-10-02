@@ -138,14 +138,14 @@ export function SearchCommand() {
         }}
         className="m-0 mx-auto mt-[8vh] w-[min(40rem,calc(100vw-2rem))] max-w-none rounded-md border border-rule bg-paper-raised p-0 text-ink shadow-overlay backdrop:bg-ink/40 backdrop:backdrop-blur-[2px]"
       >
-        <div className="flex items-center gap-2 border-b border-rule px-4">
+        <div className="flex items-center gap-2 border-b border-rule px-4 focus-within:shadow-[inset_0_-2px_0_0_var(--a-focus)]">
           <Search aria-hidden className="size-4 text-ink-3" />
           <input
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value.slice(0, 120))}
             onKeyDown={onInputKey}
-            placeholder="Search signals, technologies, companies, papers, projects, topics"
+            placeholder="Search signals, technologies, papers, projects…"
             className="h-14 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-ink-3"
             role="combobox"
             aria-expanded={results.length > 0}
@@ -161,7 +161,7 @@ export function SearchCommand() {
           </button>
         </div>
 
-        <div className="max-h-[60vh] overflow-y-auto">
+        <div className="max-h-[60vh] overflow-y-auto overscroll-contain">
           {status === 'idle' ? (
             <div className="px-4 py-5">
               <p className="meta mb-2">Try</p>

@@ -28,7 +28,7 @@ create table public.topics (
 create table public.profiles (
   id           uuid primary key references auth.users (id) on delete cascade,
   display_name text check (char_length(display_name) <= 80),
-  role         text not null default 'member' check (role in ('member', 'admin')),
+  role         text not null default 'member' check (role in ('member', 'reviewer', 'admin')),
   created_at   timestamptz not null default now(),
   updated_at   timestamptz not null default now()
 );
@@ -49,6 +49,16 @@ $$;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+create or replace function public.is_reviewer()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (select 1 from public.profiles where id = auth.uid() and role in ('reviewer', 'admin'));
+$$;
 
 create or replace function public.is_admin()
 returns boolean
@@ -179,11 +189,12 @@ create table public.user_topics (
   primary key (user_id, topic_slug)
 );
 
+-- Saves are keyed by slug so they work for live-computed signals that are not stored in `signals`.
 create table public.saved_signals (
-  user_id    uuid not null references auth.users (id) on delete cascade,
-  signal_id  uuid not null references public.signals (id) on delete cascade,
-  created_at timestamptz not null default now(),
-  primary key (user_id, signal_id)
+  user_id     uuid not null references auth.users (id) on delete cascade,
+  signal_slug text not null check (signal_slug ~ '^[a-z0-9-]{3,120}$'),
+  created_at  timestamptz not null default now(),
+  primary key (user_id, signal_slug)
 );
 
 -- ---------------------------------------------------------------------------

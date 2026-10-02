@@ -44,6 +44,8 @@ const SECTIONS = [
   ['breakout-score', 'How the Breakout Score works'],
   ['evidence', 'How evidence is weighted'],
   ['hype', 'How hype is penalised'],
+  ['ai-layer', 'The AI contextual layer'],
+  ['moderation', 'Human review and moderation'],
   ['uncertainty', 'How uncertainty is represented'],
   ['limitations', 'Known limitations'],
 ] as const
@@ -264,6 +266,31 @@ points = min(1, log₂(max(ratio, 1)) ÷ log₂(${MOMENTUM_SATURATION})) × 10
             </li>
           </ul>
           <P>The total penalty is capped at −{HYPE_PENALTY_CAP}. A hype penalty also lowers confidence.</P>
+
+          <H2 id="ai-layer">The AI contextual layer</H2>
+          <P>
+            When an AI key is configured, the highest-ranked new signals are read by a language model (by default{' '}
+            <code className="font-mono text-sm">openai/gpt-oss-20b</code> on Groq; any OpenAI-compatible endpoint works). The model sees only
+            text from the signal’s own sources — the repository README, model card, package readme or paper abstract — and returns
+            structured JSON: whether the item is relevant to developers, a plain title and summary, claims, limitations, maturity and rubric
+            suggestions.
+          </P>
+          <ul className="mt-4 grid list-disc gap-2 pl-5 text-[17px] leading-relaxed text-ink-2">
+            <li>Every claim must carry a quote. Code checks that the quote appears verbatim in the cited source; claims that fail are discarded, not softened.</li>
+            <li>Kept claims are shown as facts with their quote and an <span className="font-mono text-sm">AI</span> marker; judgements (who is affected, what to do) are shown as analysis.</li>
+            <li>Rubric suggestions apply only with a verified quote, are capped at “high”, and never override a human reviewer.</li>
+            <li>Items the model classifies as spam, off-topic or not useful to developers are removed from the feed.</li>
+            <li>The model is never asked for the Breakout Score. The score remains a deterministic function of the stored inputs.</li>
+            <li>Results are cached per signal for a week, and a per-run call budget keeps usage within free-tier limits.</li>
+          </ul>
+
+          <H2 id="moderation">Human review and moderation</H2>
+          <P>
+            Approved reviewers can hide a signal from public view, and restore it, with a written reason. Reasons and reviewer names are
+            published in the <Link href="/moderation" className="link">moderation log</Link>. Reviewer access is granted by application: a
+            structured case, including a sample review of a live signal, read and approved by the site owner.{' '}
+            <Link href="/reviewers" className="link">About the reviewer programme</Link>.
+          </P>
 
           <H2 id="uncertainty">How uncertainty is represented</H2>
           <P>Every statement on a signal page carries one of three labels:</P>

@@ -6,6 +6,7 @@ import { runPipeline } from '@/lib/pipeline/run'
 import { enabledAdapters } from '@/lib/pipeline/sources'
 import { MemoryPipelineStore } from '@/lib/pipeline/store'
 import { pipelineEnvFromProcess } from '@/lib/pipeline/env'
+import { buildEnricherFromEnv } from '@/lib/ai/setup'
 import { createMemoryRepository, indexSignals, type Indexed } from './memory-repository'
 import { demoRepository } from './demo-repository'
 import { SIGNALS_TAG } from './tags'
@@ -39,6 +40,7 @@ async function computeSnapshot(): Promise<LiveSnapshot> {
     env,
     now,
     lookbackHours: LOOKBACK_HOURS,
+    enrich: buildEnricherFromEnv((m) => console.log(`[live] ${m}`)),
     log: (m) => console.log(`[live] ${m}`),
   })
   return { generatedAt: now.toISOString(), entries: [...store.signals.values()], stats: result.stats }

@@ -1,6 +1,9 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Breadcrumbs } from '@/components/Breadcrumbs'
+import { JsonLd } from '@/components/JsonLd'
+import { BUILDER } from '@/lib/builder'
+import { absoluteUrl } from '@/lib/config'
 
 export const metadata: Metadata = {
   title: 'About',
@@ -53,11 +56,58 @@ export default function AboutPage() {
           ))}
         </dl>
 
+        <section id="builder" aria-labelledby="builder-h" className="mt-14 scroll-mt-20 border-t border-rule-strong pt-6">
+          <p className="meta">The mind behind Astrava</p>
+          <h2 id="builder-h" className="mt-1 font-serif text-3xl font-medium">{BUILDER.name}</h2>
+          <p className="meta mt-1 normal-case tracking-normal">
+            {BUILDER.role} · {BUILDER.location}
+          </p>
+          <p className="mt-5 text-[17px] leading-relaxed text-ink">{BUILDER.summary}</p>
+          {BUILDER.bio.map((p) => (
+            <p key={p.slice(0, 20)} className="mt-4 text-[17px] leading-relaxed text-ink-2">
+              {p}
+            </p>
+          ))}
+          <p className="mt-6 border-l-2 border-accent pl-4 font-serif text-xl leading-snug">{BUILDER.why}</p>
+          <ul className="mt-5 flex flex-wrap gap-2">
+            {BUILDER.focus.map((f) => (
+              <li key={f} className="rounded-xs border border-rule px-2 py-1 text-sm">
+                {f}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-6 flex flex-wrap gap-3">
+            <a href={BUILDER.linkedin} target="_blank" rel="noopener noreferrer me" className="btn-primary">
+              LinkedIn
+            </a>
+            <a href={BUILDER.github} target="_blank" rel="noopener noreferrer me" className="btn-secondary">
+              GitHub
+            </a>
+            <a href={BUILDER.site} target="_blank" rel="noopener noreferrer me" className="btn-secondary">
+              Portfolio
+            </a>
+          </p>
+          <JsonLd
+            data={{
+              '@context': 'https://schema.org',
+              '@type': 'Person',
+              name: BUILDER.name,
+              jobTitle: BUILDER.role,
+              description: BUILDER.summary,
+              url: BUILDER.site,
+              sameAs: [BUILDER.linkedin, BUILDER.github, BUILDER.site],
+              knowsAbout: [...BUILDER.focus],
+              mainEntityOfPage: absoluteUrl('/about#builder'),
+            }}
+          />
+        </section>
+
         <h2 className="mt-14 border-t border-rule-strong pt-6 font-serif text-3xl font-medium">About the data on this deployment</h2>
         <p className="mt-4 text-[17px] leading-relaxed text-ink-2">
-          When no database is connected, Astrava runs on a clearly labelled demo dataset: the projects, publishers and numbers are
-          fictional, and source links point to placeholder pages on example.org. The bar at the top of every page says whether you are
-          looking at demo or live data. Once connected, an hourly pipeline collects public data from official APIs and feeds; see the{' '}
+          Signals are collected from official public APIs — GitHub, Hacker News, arXiv, Hugging Face and npm — and recomputed every hour.
+          An optional AI layer drafts context, but a statement is kept as fact only when its quoted excerpt is found verbatim in the cited
+          source. If every live source is unavailable, the site falls back to a clearly labelled fictional demo dataset. The bar at the top
+          of every page says which you are looking at. See the{' '}
           <Link href="/methodology" className="link">
             methodology
           </Link>{' '}

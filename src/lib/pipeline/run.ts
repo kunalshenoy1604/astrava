@@ -3,7 +3,8 @@
  * (Vercel Cron → /api/cron/ingest, GitHub Actions, or `npm run pipeline`).
  * The frontend never polls; it reads stored results and is revalidated by tag.
  */
-import type { MetricSeries } from '@/lib/domain/types'
+import type { MetricSeries, Signal } from '@/lib/domain/types'
+import type { Enricher } from '@/lib/ai/enricher'
 import type { FetchContext, Metric, NormalizedEvent, PipelineEnv, PipelineStats, RawEvent, SourceAdapter } from './types'
 import type { PipelineStore } from './store'
 import { buildSeries, dedupe, isCandidate, isRelevant, resolveEntities } from './stages'
@@ -21,6 +22,8 @@ export interface RunOptions {
   fetchImpl?: typeof fetch
   log?: (msg: string) => void
   newId?: () => string
+  /** AI contextual layer; omitted when no AI key is configured. */
+  enrich?: Enricher
 }
 
 export interface RunResult {
@@ -95,6 +98,7 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
     const prior = await opts.store.priorMetrics(allRefs, new Date(now.getTime() - HISTORY_DAYS * 86_400_000))
     const existing = await opts.store.loadSignals(clusters.map(signalSlugFor))
 
+    const drafts: Signal[] = []
     for (const cluster of clusters) {
       const refs = new Set(cluster.events.flatMap((e) => e.refs))
       const observations: Metric[] = [...cluster.events.flatMap((e) => e.metrics), ...[...refs].flatMap((r) => prior.get(r) ?? [])]
@@ -109,17 +113,27 @@ export async function runPipeline(opts: RunOptions): Promise<RunResult> {
       }
       stats.candidates++
 
-      // 7–9. Evidence, structured explanation, score
+      // 7–8. Evidence and structured explanation
       const fresh = extractSignal(cluster, series, now, previous?.id ?? (opts.newId ?? (() => crypto.randomUUID()))())
-      const signal = mergeWithExisting(fresh, previous)
+      drafts.push(mergeWithExisting(fresh, previous))
+    }
+
+    // 8b. Optional AI contextual layer: quote-verified claims, relevance filtering
+    let finalSignals = drafts
+    if (opts.enrich) {
+      const enriched = await opts.enrich(drafts, now)
+      finalSignals = enriched.signals
+      stats.ai = enriched.stats
+    }
+
+    // 9–10. Validate, score, store
+    for (const signal of finalSignals) {
       const issues = validateSignal(signal)
       if (issues.length) {
-        log(`skipping ${slug}: ${issues.map((i) => `${i.path} ${i.message}`).join('; ')}`)
+        log(`skipping ${signal.slug}: ${issues.map((i) => `${i.path} ${i.message}`).join('; ')}`)
         continue
       }
       const score = computeBreakoutScore(signal)
-
-      // 10. Store
       await opts.store.saveSignal(signal, score)
       storedSlugs.push(signal.slug)
       stats.stored++

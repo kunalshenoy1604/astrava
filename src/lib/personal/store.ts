@@ -52,12 +52,12 @@ export async function getSavedSlugs(viewer: Viewer | null): Promise<string[]> {
     const db = await createSessionClient()
     const { data, error } = await db!
       .from('saved_signals')
-      .select('created_at, signals(slug)')
+      .select('signal_slug')
       .eq('user_id', viewer.id)
       .order('created_at', { ascending: false })
       .limit(MAX_SAVED)
     if (error) throw new Error(error.message)
-    return (data as unknown as { signals: { slug: string } | null }[]).map((r) => r.signals?.slug).filter((s): s is string => Boolean(s))
+    return data.map((r) => r.signal_slug as string)
   }
   return parseSlugList((await cookies()).get(SAVED_COOKIE)?.value)
 }
@@ -76,13 +76,10 @@ export async function mergeAnonymousState(userId: string): Promise<void> {
     )
   }
   if (slugs.length) {
-    const { data } = await db.from('signals').select('id').in('slug', slugs)
-    if (data?.length) {
-      await db.from('saved_signals').upsert(
-        data.map((r) => ({ user_id: userId, signal_id: r.id as string })),
-        { onConflict: 'user_id,signal_id', ignoreDuplicates: true },
-      )
-    }
+    await db.from('saved_signals').upsert(
+      slugs.map((signal_slug) => ({ user_id: userId, signal_slug })),
+      { onConflict: 'user_id,signal_slug', ignoreDuplicates: true },
+    )
   }
   store.delete(RADAR_COOKIE)
   store.delete(SAVED_COOKIE)

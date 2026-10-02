@@ -29,4 +29,14 @@ export function getPublicSupabaseConfig(): PublicSupabaseConfig | null {
 
 export const isSupabaseConfigured = getPublicSupabaseConfig() !== null
 
-export const isGoogleAuthEnabled = process.env.NEXT_PUBLIC_AUTH_GOOGLE_ENABLED === 'true'
+/** Social sign-in providers supported by Supabase Auth that this app can show. */
+export const OAUTH_PROVIDERS = {
+  google: 'Google',
+  x: 'X',
+  github: 'GitHub',
+  linkedin_oidc: 'LinkedIn',
+  apple: 'Apple',
+  discord: 'Discord',
+  gitlab: 'GitLab',
+} as const
+export type OAuthProvider = keyof typeof OAUTH_PROVIDERS
