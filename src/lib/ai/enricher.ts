@@ -66,6 +66,16 @@ export interface EnrichStats {
   droppedClaims: number
   errors: number
   rateLimited: boolean
+  lastError?: string
+}
+
+/** Error text safe to show publicly: no keys, tokens or URLs with credentials. */
+export function sanitizeError(message: string): string {
+  return message
+    .replace(/\b(gsk|sk|re|sb_secret|sb_publishable)_[A-Za-z0-9_-]+/g, '[redacted]')
+    .replace(/Bearer\s+\S+/gi, 'Bearer [redacted]')
+    .replace(/postgres(ql)?:\/\/\S+/gi, '[redacted-url]')
+    .slice(0, 200)
 }
 
 export type Enricher = (signals: Signal[], now: Date) => Promise<{ signals: Signal[]; stats: EnrichStats }>
@@ -103,6 +113,7 @@ export function createEnricher(opts: {
         } catch (err) {
           if (err instanceof AiRateLimited) stats.rateLimited = true
           else stats.errors++
+          stats.lastError = sanitizeError((err as Error).message)
           opts.log?.(`ai: ${signal.slug}: ${(err as Error).message}`)
           continue
         }

@@ -18,27 +18,45 @@ import type { SourceText } from './context'
 export const PROMPT_VERSION = 'enrich-v1'
 const MAX_AI_LEVEL = 3
 
-const quoted = z.object({
-  text: z.string().min(8).max(300),
-  quote: z.string().min(1).max(400),
-  sourceId: z.string().max(10),
-})
+const str = (max: number) => z.string().transform((v) => v.trim().slice(0, max))
+const quoted = z.object({ text: str(300), quote: str(400), sourceId: z.coerce.string().max(10) })
+const scored = z.object({ level: z.coerce.number().int().min(0).max(4), reason: str(300).default(''), quote: str(400), sourceId: z.coerce.string().max(10) })
 
+/** Keeps the valid items of an array and drops malformed ones, instead of rejecting the whole response. */
+const lenientArray = <T extends z.ZodTypeAny>(item: T, max: number) =>
+  z
+    .array(z.unknown())
+    .catch([])
+    .transform((items) => items.flatMap((i) => {
+      const r = item.safeParse(i)
+      return r.success ? [r.data as z.infer<T>] : []
+    }).slice(0, max))
+
+/**
+ * Model output schema. Lenient by design: one malformed field is dropped,
+ * never the whole analysis. Safety does not depend on this schema — every
+ * factual claim is re-checked against the source text in applyEnrichment.
+ */
 export const enrichmentSchema = z.object({
-  relevant: z.boolean(),
-  relevanceReason: z.string().max(300).default(''),
-  category: z.string().max(40).optional(),
-  title: z.string().max(120).optional(),
-  summary: z.string().max(300).optional(),
-  claims: z.array(quoted).max(6).default([]),
-  limitations: z.array(quoted).max(4).default([]),
-  whoIsAffected: z.string().max(300).optional(),
-  whatCanDevelopersDo: z.string().max(300).optional(),
+  relevant: z.preprocess((v) => !(v === false || v === 'false'), z.boolean()),
+  relevanceReason: z.string().max(300).catch('').default(''),
+  category: z.string().max(40).optional().catch(undefined),
+  title: str(120).optional().catch(undefined),
+  summary: str(300).optional().catch(undefined),
+  claims: lenientArray(quoted, 6).default([]),
+  limitations: lenientArray(quoted, 4).default([]),
+  whoIsAffected: str(300).optional().catch(undefined),
+  whatCanDevelopersDo: str(300).optional().catch(undefined),
   maturity: z
-    .object({ level: z.enum(['prototype', 'experimental', 'early-production', 'production', 'unknown']), quote: z.string().max(400).optional(), sourceId: z.string().max(10).optional() })
-    .optional(),
-  technicalSignificance: z.object({ level: z.number().int().min(0).max(4), reason: z.string().max(300), quote: z.string().max(400), sourceId: z.string().max(10) }).optional(),
-  developerRelevance: z.object({ level: z.number().int().min(0).max(4), reason: z.string().max(300), quote: z.string().max(400), sourceId: z.string().max(10) }).optional(),
+    .object({
+      level: z.enum(['prototype', 'experimental', 'early-production', 'production', 'unknown']).catch('unknown'),
+      quote: z.string().max(400).optional(),
+      sourceId: z.coerce.string().max(10).optional(),
+    })
+    .optional()
+    .catch(undefined),
+  technicalSignificance: scored.optional().catch(undefined),
+  developerRelevance: scored.optional().catch(undefined),
 })
 export type Enrichment = z.infer<typeof enrichmentSchema>
 

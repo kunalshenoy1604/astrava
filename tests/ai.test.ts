@@ -112,3 +112,25 @@ describe('enricher', () => {
     expect(aiConfigFromEnv({})).toBeNull()
   })
 })
+
+describe('lenient parsing and source filters', () => {
+  it('keeps valid parts of a partly malformed response', () => {
+    const r = enrichmentSchema.parse({
+      relevant: 'false',
+      claims: [{ text: 'ok claim here', quote: 'some quote text', sourceId: 's1' }, { nope: 1 }],
+      maturity: { level: 'beta' },
+      technicalSignificance: { level: 9 },
+    })
+    expect(r.relevant).toBe(false)
+    expect(r.claims).toHaveLength(1)
+    expect(r.maturity?.level).toBe('unknown')
+    expect(r.technicalSignificance).toBeUndefined()
+  })
+  it('drops quantized, merged and uncensored model re-uploads', async () => {
+    const { isDerivativeModel } = await import('@/lib/pipeline/sources/huggingface')
+    expect(isDerivativeModel('abenzerps/Qwen-Image-2.1-Uncensored-GGUF')).toBe(true)
+    expect(isDerivativeModel('ista-daslab/qwen3.8-27b-gsq-rco', ['base_model:quantized:qwen/qwen3.8-27b'])).toBe(true)
+    expect(isDerivativeModel('qwen/qwen3.8-27b', ['text-generation'])).toBe(false)
+  })
+})
+

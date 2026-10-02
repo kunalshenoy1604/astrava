@@ -12,6 +12,16 @@ interface Model {
   lastModified?: string
 }
 
+/**
+ * Re-uploads (quantizations, format conversions, merges) and NSFW/"uncensored"
+ * variants dominate trending lists but are rarely new technology. They are
+ * excluded at the source; the original model still qualifies on its own.
+ */
+const DERIVATIVE = /(gguf|gptq|awq|exl2|mlx|bnb|onnx|[-_](4|5|6|8)bit|int[48]|fp8|nf4|quant|uncensored|abliterat|heretic|nsfw|lewd|erotic|merge)/i
+export function isDerivativeModel(id: string, tags: string[] = []): boolean {
+  return DERIVATIVE.test(id) || tags.some((t) => t.startsWith('base_model:quantized:') || t.startsWith('base_model:merge:') || t === 'not-for-all-audiences')
+}
+
 export const huggingFaceAdapter: SourceAdapter = {
   id: 'huggingface',
   name: 'Hugging Face Hub',
@@ -32,6 +42,7 @@ export const huggingFaceAdapter: SourceAdapter = {
   normalize(raw): NormalizedEvent | null {
     const m = raw.payload as Model
     if (!m?.id || !m.id.includes('/')) return null
+    if (isDerivativeModel(m.id, m.tags)) return null
     const on = raw.occurredAt.slice(0, 10)
     return {
       source: 'huggingface',
