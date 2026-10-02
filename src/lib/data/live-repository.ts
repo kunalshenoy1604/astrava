@@ -26,6 +26,7 @@ export interface LiveSnapshot {
 }
 
 const LOOKBACK_HOURS = 72
+const MAX_SIGNALS = 120
 
 // De-duplicates concurrent cold-cache calls within one server instance (e.g. during a build).
 let inflight: { key: number; promise: Promise<LiveSnapshot> } | null = null
@@ -43,7 +44,9 @@ async function computeSnapshot(): Promise<LiveSnapshot> {
     enrich: buildEnricherFromEnv((m) => console.log(`[live] ${m}`)),
     log: (m) => console.log(`[live] ${m}`),
   })
-  return { generatedAt: now.toISOString(), entries: [...store.signals.values()], stats: result.stats }
+  // Keep the shared cache entry small: the strongest signals only.
+  const entries = [...store.signals.values()].sort((a, b) => b.score.total - a.score.total).slice(0, MAX_SIGNALS)
+  return { generatedAt: now.toISOString(), entries, stats: result.stats }
 }
 
 /**
@@ -52,7 +55,8 @@ async function computeSnapshot(): Promise<LiveSnapshot> {
  * labelled demo dataset. A successful run is cached for an hour.
  */
 export async function loadLiveSnapshot(): Promise<LiveSnapshot> {
-  'use cache'
+  // Remote: one pipeline run is shared by every serverless instance, instead of each cold instance re-running it.
+  'use cache: remote'
   cacheTag(SIGNALS_TAG)
   const key = Math.floor(Date.now() / 600_000)
   if (!inflight || inflight.key !== key) inflight = { key, promise: computeSnapshot() }
